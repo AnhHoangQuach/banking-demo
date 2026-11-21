@@ -1,0 +1,71 @@
+# Local Minikube profile for the original Phase 2 architecture.
+# Load after common and component value files.
+
+namespace:
+  enabled: false
+
+secret:
+  enabled: true
+  databaseUrl: "postgresql://banking:bankingpass@postgres:5432/banking"
+  redisUrl: "redis://redis:6379/0"
+
+postgres:
+  storage:
+    storageClassName: standard
+
+redis:
+  storage:
+    storageClassName: standard
+
+kong:
+  enabled: true
+
+kongExternalService:
+  enabled: false
+
+ingress:
+  enabled: false
+
+auth-service:
+  image:
+    repository: banking-demo/auth-service
+    tag: local
+    pullPolicy: IfNotPresent
+  rabbitmqSecretRef: null
+  extraEnv: null
+
+account-service:
+  image:
+    repository: banking-demo/account-service
+    tag: local
+    pullPolicy: IfNotPresent
+  rabbitmqSecretRef: null
+  extraEnv: null
+
+transfer-service:
+  image:
+    repository: banking-demo/transfer-service
+    tag: local
+    pullPolicy: IfNotPresent
+  rabbitmqSecretRef: null
+  extraEnv: null
+
+notification-service:
+  image:
+    repository: banking-demo/notification-service
+    tag: local
+    pullPolicy: IfNotPresent
+  rabbitmqSecretRef: null
+  extraEnv: null
+
+frontend:
+  image:
+    repository: banking-demo/frontend
+    tag: local
+    pullPolicy: IfNotPresent
+
+api-producer:
+  enabled: false
+
+rabbitmq:
+  enabled: false

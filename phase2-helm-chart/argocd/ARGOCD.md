@@ -5,6 +5,7 @@ Hướng dẫn triển khai chart **banking-demo** bằng ArgoCD.
 ## 🚀 Cách đơn giản nhất (Khuyến nghị cho người mới)
 
 **Chỉ cần 2 files:**
+
 1. `project.yaml` - ArgoCD Project
 2. `application.yaml` - ArgoCD Application (deploy tất cả services trong 1 dashboard)
 
@@ -27,7 +28,7 @@ Hướng dẫn triển khai chart **banking-demo** bằng ArgoCD theo cách chuy
 3. **Điền thông tin:**
    - Type: Git
    - Project: banking-demo (hoặc để trống)
-   - Repository URL: `https://github.com/kevinram164/banking-demo.git`
+   - Repository URL: `https://github.com/AnhHoangQuach/banking-demo`
    - Username/Password: (nếu repo private)
 4. **Click "CONNECT"**
 
@@ -39,13 +40,13 @@ kubectl get appproject banking-demo -n argocd -o yaml | grep sourceRepos
 
 # Nếu repo không có, thêm vào:
 kubectl patch appproject banking-demo -n argocd --type merge \
-  -p '{"spec":{"sourceRepos":["https://github.com/kevinram164/banking-demo.git"]}}'
+  -p '{"spec":{"sourceRepos":["https://github.com/AnhHoangQuach/banking-demo"]}}'
 ```
 
 **Lưu ý:** Nếu các services khác deploy được nhưng postgres/redis không, có thể:
+
 - Các services đã được deploy từ trước khi repo bị disconnect
 - Cần connect repo và sync lại tất cả Applications
-
 
 ---
 
@@ -79,6 +80,7 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 ```
 
 Mở browser: `https://localhost:8080`
+
 - User: `admin`
 - Password: (lấy từ bước 1.2)
 
@@ -87,18 +89,20 @@ Mở browser: `https://localhost:8080`
 **2.1. Sửa Project (`argocd/project.yaml`):**
 
 Mở file `argocd/project.yaml`, tìm dòng:
+
 ```yaml
 sourceRepos:
-  - https://github.com/kevinram164/banking-demo.git   # ← Đổi thành repo của bạn
+  - https://github.com/AnhHoangQuach/banking-demo # ← Đổi thành repo của bạn
 ```
 
 **2.2. Sửa các Application (`argocd/applications/*.yaml`):**
 
 Mở từng file trong `argocd/applications/`, tìm và sửa:
+
 ```yaml
 source:
-  repoURL: https://github.com/kevinram164/banking-demo.git  # ← Đổi thành repo của bạn
-  targetRevision: main                                      # ← Đổi branch nếu cần
+  repoURL: https://github.com/AnhHoangQuach/banking-demo # ← Đổi thành repo của bạn
+  targetRevision: main # ← Đổi branch nếu cần
 ```
 
 **Lưu ý:** Nếu repo là **private**, bạn cần cấu hình credential trong ArgoCD trước (xem mục 2.2 bên dưới).
@@ -144,6 +148,7 @@ kubectl apply -f applications/redis.yaml -n argocd
 ```
 
 **Đợi infra sẵn sàng:**
+
 - Vào ArgoCD UI → Application `banking-demo-namespace` → đợi status **Synced** và **Healthy**
 - Hoặc kiểm tra: `kubectl get pods -n banking | grep -E "postgres|redis"`
 
@@ -200,6 +205,7 @@ argocd app sync -l app.kubernetes.io/name=banking-demo
 ```
 
 ArgoCD sẽ tự động:
+
 1. Sync Wave -1 trước (namespace và secret)
 2. Đợi Wave -1 xong → Sync Wave 0 (postgres, redis - song song)
 3. Đợi Wave 0 xong → Sync Wave 1 (kong)
@@ -218,6 +224,7 @@ argocd app sync banking-demo-auth-service
 ```
 
 **Cách 3: Qua UI (dễ nhất)**
+
 1. Vào ArgoCD UI → Applications
 2. Chọn tất cả Applications (checkbox) → **Sync** → **Synchronize**
 3. ArgoCD sẽ tự động deploy theo sync waves
@@ -231,6 +238,7 @@ argocd app sync banking-demo-auth-service
 **Giải pháp:**
 
 1. **Xóa namespace cũ (nếu không có dữ liệu quan trọng):**
+
    ```bash
    kubectl delete namespace banking
    ```
@@ -245,21 +253,25 @@ argocd app sync banking-demo-auth-service
 ### Bước 6: Kiểm tra
 
 **5.1. Kiểm tra trong ArgoCD UI:**
+
 - Vào Applications → bạn sẽ thấy 8 Application riêng
 - Mỗi Application có status: **Synced** (màu xanh) = đã deploy thành công
 
 **5.2. Kiểm tra pods:**
+
 ```bash
 kubectl get pods -n banking
 ```
 
 Bạn sẽ thấy:
+
 - `postgres-0`, `redis-0` (infra)
 - `kong-xxx` (kong)
 - `auth-service-xxx`, `account-service-xxx`, ... (microservices)
 - `frontend-xxx` (frontend)
 
 **5.3. Kiểm tra ingress:**
+
 ```bash
 kubectl get ingress -n banking
 ```
@@ -290,6 +302,7 @@ kubectl apply -f applications/ -n argocd
 ### Cách 2: Dùng Script (Tự động hóa)
 
 **Linux/Mac:**
+
 ```bash
 cd phase2-helm-chart/argocd
 chmod +x deploy-all.sh
@@ -297,6 +310,7 @@ chmod +x deploy-all.sh
 ```
 
 **Windows PowerShell:**
+
 ```powershell
 cd phase2-helm-chart\argocd
 .\deploy-all.ps1
@@ -317,7 +331,8 @@ kubectl apply -f application-set-all-services.yaml -n argocd
 **Ưu điểm:** Tự động tạo tất cả Applications từ một file, dễ maintain  
 **Nhược điểm:** Cần hiểu ApplicationSet syntax
 
-**Lưu ý:** 
+**Lưu ý:**
+
 - `application.yaml` và `application-set.yaml` đã bị xóa vì gây conflict với per-service Applications
 - ApplicationSet sẽ tự động tạo các Applications với Sync Waves đã cấu hình. Khi sync tất cả cùng lúc, ArgoCD sẽ tự động deploy theo thứ tự (namespace → postgres/redis → kong → services → frontend → ingress).
 
@@ -335,23 +350,25 @@ ArgoCD hỗ trợ **Sync Waves** để tự động deploy Applications theo th�
 
 ### Thứ tự Sync Waves trong banking-demo
 
-| Wave | Applications | Mô tả |
-|------|-------------|-------|
-| **-1** | `banking-demo-namespace` | Namespace và Secret - Deploy đầu tiên nhất |
-| **0** | `banking-demo-postgres`<br>`banking-demo-redis` | Infrastructure (postgres, redis) - Deploy song song sau namespace |
-| **1** | `banking-demo-kong` | API Gateway - Deploy sau infra |
-| **2** | `banking-demo-auth-service`<br>`banking-demo-account-service`<br>`banking-demo-transfer-service`<br>`banking-demo-notification-service` | Microservices - Deploy song song sau kong |
-| **3** | `banking-demo-frontend` | Frontend - Deploy sau microservices |
-| **4** | `banking-demo-ingress` | Ingress - Deploy cuối cùng |
+| Wave   | Applications                                                                                                                            | Mô tả                                                             |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **-1** | `banking-demo-namespace`                                                                                                                | Namespace và Secret - Deploy đầu tiên nhất                        |
+| **0**  | `banking-demo-postgres`<br>`banking-demo-redis`                                                                                         | Infrastructure (postgres, redis) - Deploy song song sau namespace |
+| **1**  | `banking-demo-kong`                                                                                                                     | API Gateway - Deploy sau infra                                    |
+| **2**  | `banking-demo-auth-service`<br>`banking-demo-account-service`<br>`banking-demo-transfer-service`<br>`banking-demo-notification-service` | Microservices - Deploy song song sau kong                         |
+| **3**  | `banking-demo-frontend`                                                                                                                 | Frontend - Deploy sau microservices                               |
+| **4**  | `banking-demo-ingress`                                                                                                                  | Ingress - Deploy cuối cùng                                        |
 
 ### Ví dụ sử dụng
 
 **Sync tất cả cùng lúc:**
+
 ```bash
 argocd app sync -l app.kubernetes.io/name=banking-demo
 ```
 
 ArgoCD sẽ tự động:
+
 1. ✅ Sync Wave -1 (namespace và secret) → đợi xong
 2. ✅ Sync Wave 0 (postgres, redis - song song) → đợi xong
 3. ✅ Sync Wave 1 (kong) → đợi xong
@@ -360,15 +377,17 @@ ArgoCD sẽ tự động:
 6. ✅ Sync Wave 4 (ingress)
 
 **Xem sync waves trong UI:**
+
 - Vào ArgoCD UI → Applications
 - Mỗi Application sẽ hiển thị sync wave trong metadata
 
 **Tùy chỉnh sync wave:**
 Sửa annotation trong file Application:
+
 ```yaml
 metadata:
   annotations:
-    argocd.argoproj.io/sync-wave: "2"  # Thay đổi số này
+    argocd.argoproj.io/sync-wave: '2' # Thay đổi số này
 ```
 
 ---
@@ -378,12 +397,14 @@ metadata:
 ### Tại sao deploy riêng từng service?
 
 **Vấn đề với cách cũ (1 Application cho tất cả):**
+
 - ❌ Khó quản lý: tất cả services chung một dashboard
 - ❌ Khó troubleshoot: không biết service nào lỗi
 - ❌ Sync/rollback ảnh hưởng tất cả services
 - ❌ Tự động xóa/tạo lại khi push commit (nếu bật `prune: true`)
 
 **Lợi ích với cách mới (mỗi service một Application):**
+
 - ✅ Dễ quản lý: mỗi service có dashboard riêng
 - ✅ Dễ troubleshoot: biết chính xác service nào lỗi
 - ✅ Sync/rollback độc lập: chỉ ảnh hưởng service đó
@@ -478,10 +499,12 @@ Xem **Bước 1** trong Quick Start ở trên.
 #### 2.2. Repo Git phải được ArgoCD truy cập được
 
 **Repo public:**
+
 - ArgoCD clone không cần cấu hình thêm.
 - Chỉ cần sửa `repoURL` trong các Application files.
 
 **Repo private:**
+
 1. Tạo Secret chứa credential:
 
 ```bash
@@ -518,18 +541,18 @@ Xem thêm: [ArgoCD Private Repositories](https://argo-cd.readthedocs.io/en/stabl
 
 Trong thư mục `argocd/applications/` có 8 Application files:
 
-| File | Service | Mô tả |
-|------|---------|-------|
-| `namespace.yaml` | Namespace & Secret | Namespace và Secret |
-| `postgres.yaml` | Database | PostgreSQL Database |
-| `redis.yaml` | Cache | Redis Cache |
-| `kong.yaml` | Kong API Gateway | API Gateway, routing |
-| `auth-service.yaml` | Auth Service | Authentication, login/register |
-| `account-service.yaml` | Account Service | User account, balance |
-| `transfer-service.yaml` | Transfer Service | Money transfer |
+| File                        | Service              | Mô tả                               |
+| --------------------------- | -------------------- | ----------------------------------- |
+| `namespace.yaml`            | Namespace & Secret   | Namespace và Secret                 |
+| `postgres.yaml`             | Database             | PostgreSQL Database                 |
+| `redis.yaml`                | Cache                | Redis Cache                         |
+| `kong.yaml`                 | Kong API Gateway     | API Gateway, routing                |
+| `auth-service.yaml`         | Auth Service         | Authentication, login/register      |
+| `account-service.yaml`      | Account Service      | User account, balance               |
+| `transfer-service.yaml`     | Transfer Service     | Money transfer                      |
 | `notification-service.yaml` | Notification Service | Real-time notifications (WebSocket) |
-| `frontend.yaml` | Frontend | React UI |
-| `ingress.yaml` | Ingress | HAProxy Ingress, external access |
+| `frontend.yaml`             | Frontend             | React UI                            |
+| `ingress.yaml`              | Ingress              | HAProxy Ingress, external access    |
 
 ### 3.2. Thứ tự deploy
 
@@ -583,12 +606,14 @@ Sau đó vào UI sync từng cái theo thứ tự: infra → kong → services �
 ### 3.3. Sync từng Application
 
 **Qua UI (khuyến nghị):**
+
 1. Vào ArgoCD UI → Applications
 2. Click vào Application (vd: `banking-demo-namespace`)
 3. Click nút **Sync** (mũi tên tròn)
 4. Chọn **Synchronize** → **Synchronize**
 
 **Qua CLI:**
+
 ```bash
 # Login vào ArgoCD (lần đầu)
 argocd login localhost:8080
@@ -610,11 +635,13 @@ argocd app sync -l app.kubernetes.io/name=banking-demo
 ### 3.4. Kiểm tra status
 
 **Trong ArgoCD UI:**
+
 - Status **Synced** (màu xanh) = đã deploy thành công
 - Status **OutOfSync** (màu vàng) = cần sync
 - Status **Missing** (màu đỏ) = chưa sync hoặc lỗi
 
 **Qua CLI:**
+
 ```bash
 # Xem tất cả Applications
 argocd app list
@@ -642,6 +669,7 @@ Nếu bạn muốn deploy tất cả services chung một Application (không kh
 ### Bước 1: Sửa Application cho đúng repo
 
 Mở `argocd/application.yaml`, sửa:
+
 - **spec.source.repoURL**: URL repo Git của bạn
 - **spec.source.targetRevision**: Branch hoặc tag (vd: `main`)
 
@@ -659,6 +687,7 @@ kubectl get pods -n banking
 ```
 
 **Nhược điểm:**
+
 - ❌ Tất cả services chung một dashboard → khó quản lý
 - ❌ Sync/rollback ảnh hưởng tất cả services
 - ❌ Khó troubleshoot khi có lỗi
@@ -702,7 +731,7 @@ File **`project.yaml`** khai báo Project `banking-demo`:
 kubectl apply -f argocd/project.yaml -n argocd
 ```
 
-Sửa `project.yaml`: thay `https://github.com/kevinram164/banking-demo.git` bằng repo thật. Nếu dùng nhiều repo (vd fork), thêm vào `sourceRepos`.
+Sửa `project.yaml`: thay `https://github.com/AnhHoangQuach/banking-demo` bằng repo thật. Nếu dùng nhiều repo (vd fork), thêm vào `sourceRepos`.
 
 ### Khai báo Application thuộc Project
 
@@ -770,16 +799,18 @@ Trong các Application files (`applications/*.yaml`), sync policy được cấu
 ```yaml
 syncPolicy:
   automated:
-    prune: false      # Không tự động xóa resources
-    selfHeal: false   # Không tự động sửa drift
+    prune: false # Không tự động xóa resources
+    selfHeal: false # Không tự động sửa drift
 ```
 
 **Giải thích:**
+
 - **`prune: false`**: Không tự động xóa resource trên cluster khi không còn trong chart. **An toàn** - tránh xóa nhầm khi push commit.
 - **`selfHeal: false`**: Không tự động sửa drift (khi có người/kịch bản sửa tay trên cluster). **An toàn** - bạn kiểm soát khi nào sync.
 - **Sync thủ công**: Bạn phải vào UI hoặc dùng CLI để sync khi cần.
 
 Nếu muốn tự động sync khi push commit, đổi thành:
+
 ```yaml
 syncPolicy:
   automated:
@@ -802,20 +833,20 @@ Chart banking-demo dùng Helm hooks (namespace, secret, postgres/redis trước)
 
 ## 6. Lệnh thường dùng
 
-| Việc cần làm | Lệnh / thao tác |
-|--------------|------------------|
-| **Áp dụng Project** | `kubectl apply -f argocd/project.yaml -n argocd` |
-| **Áp dụng tất cả Applications** | `kubectl apply -f argocd/applications/ -n argocd` |
-| **Áp dụng một Application** | `kubectl apply -f argocd/applications/namespace.yaml -n argocd` |
-| **Xem danh sách Applications** | `argocd app list` hoặc ArgoCD UI → Applications |
-| **Xem trạng thái một Application** | `argocd app get banking-demo-namespace` hoặc ArgoCD UI |
-| **Sync một Application** | `argocd app sync banking-demo-namespace` hoặc UI → Sync |
-| **Sync tất cả Applications** | `argocd app sync -l app.kubernetes.io/name=banking-demo` |
-| **Hard refresh (bỏ cache Git)** | `argocd app get banking-demo-namespace --refresh` hoặc UI Refresh |
-| **Xóa một Application** | `kubectl delete application banking-demo-namespace -n argocd` |
-| **Xóa Application (payload lớn)** | `kubectl delete application <app-name> -n argocd --cascade=false` hoặc dùng script `delete-application-large-payload.sh` |
-| **Xem pods** | `kubectl get pods -n banking` |
-| **Xem logs một service** | `kubectl logs -n banking <pod-name>` |
+| Việc cần làm                       | Lệnh / thao tác                                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Áp dụng Project**                | `kubectl apply -f argocd/project.yaml -n argocd`                                                                         |
+| **Áp dụng tất cả Applications**    | `kubectl apply -f argocd/applications/ -n argocd`                                                                        |
+| **Áp dụng một Application**        | `kubectl apply -f argocd/applications/namespace.yaml -n argocd`                                                          |
+| **Xem danh sách Applications**     | `argocd app list` hoặc ArgoCD UI → Applications                                                                          |
+| **Xem trạng thái một Application** | `argocd app get banking-demo-namespace` hoặc ArgoCD UI                                                                   |
+| **Sync một Application**           | `argocd app sync banking-demo-namespace` hoặc UI → Sync                                                                  |
+| **Sync tất cả Applications**       | `argocd app sync -l app.kubernetes.io/name=banking-demo`                                                                 |
+| **Hard refresh (bỏ cache Git)**    | `argocd app get banking-demo-namespace --refresh` hoặc UI Refresh                                                        |
+| **Xóa một Application**            | `kubectl delete application banking-demo-namespace -n argocd`                                                            |
+| **Xóa Application (payload lớn)**  | `kubectl delete application <app-name> -n argocd --cascade=false` hoặc dùng script `delete-application-large-payload.sh` |
+| **Xem pods**                       | `kubectl get pods -n banking`                                                                                            |
+| **Xem logs một service**           | `kubectl logs -n banking <pod-name>`                                                                                     |
 
 ---
 
@@ -824,28 +855,33 @@ Chart banking-demo dùng Helm hooks (namespace, secret, postgres/redis trước)
 ### 7.1. Lỗi "namespace already exists"
 
 **Triệu chứng:**
+
 ```
 SyncError: namespaces "banking" already exists (retried 3 times)
 ```
 
 **Nguyên nhân:**
+
 - Nhiều Applications cùng có `CreateNamespace=true` trong `syncOptions`
 - Khi sync tất cả cùng lúc, các Applications đều cố tạo namespace → conflict
 
 **Giải pháp:**
 
 **Cách 1: Xóa namespace và sync lại (nếu không có dữ liệu quan trọng)**
+
 ```bash
 kubectl delete namespace banking
 argocd app sync -l app.kubernetes.io/name=banking-demo
 ```
 
 **Cách 2: Chỉ namespace tạo namespace (đã được cấu hình sẵn)**
+
 - Chỉ `applications/namespace.yaml` (wave -1) có `CreateNamespace=true`
 - Các Applications khác đã bỏ `CreateNamespace=true`
 - Sync lại: `argocd app sync -l app.kubernetes.io/name=banking-demo`
 
 **Kiểm tra:**
+
 ```bash
 # Xem Applications nào đang có CreateNamespace=true
 kubectl get applications -n argocd -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.syncPolicy.syncOptions}{"\n"}{end}'
@@ -856,11 +892,13 @@ kubectl get applications -n argocd -o jsonpath='{range .items[*]}{.metadata.name
 ### 7.2. Namespace đang "Pending deletion"
 
 **Triệu chứng:**
+
 - Namespace hiển thị "Pending deletion" trong ArgoCD UI
 - Lỗi: "Resource not found in cluster: undefined/undefined:banking"
 - Applications không thể deploy vào namespace này
 
 **Nguyên nhân:**
+
 - Namespace đang bị xóa nhưng bị chặn bởi finalizers
 - Có resources đang chặn việc xóa namespace
 
@@ -952,6 +990,7 @@ argocd app sync banking-demo-namespace
 **Triệu chứng:** Không tìm thấy file `infra.yaml` hoặc Application không chạy
 
 **Nguyên nhân:**
+
 - File `infra.yaml` đã được tách thành các file riêng:
   - `namespace.yaml` - Namespace và Secret (wave -1)
   - `postgres.yaml` - PostgreSQL (wave 0)
@@ -977,10 +1016,12 @@ argocd app sync -l app.kubernetes.io/name=banking-demo
 ### 7.4. Lỗi "Payload Too Large" khi xóa Application
 
 **Triệu chứng:**
+
 - Lỗi "Unable to delete application: Payload Too Large" khi xóa Application qua UI
 - Application có quá nhiều resources hoặc history
 
 **Nguyên nhân:**
+
 - Application quản lý quá nhiều resources
 - ArgoCD UI có giới hạn payload size khi gửi request xóa
 
@@ -1031,18 +1072,21 @@ argocd app sync banking-demo-postgres
 argocd app sync banking-demo-redis
 ```
 
-**Lưu ý:** 
+**Lưu ý:**
+
 - `--cascade=false` chỉ xóa Application, không xóa resources trong cluster
 - Nếu muốn xóa cả resources, bỏ `--cascade=false` hoặc xóa resources thủ công trước
 
 ### 7.5. Postgres/Redis không hiển thị resources
 
 **Triệu chứng:**
+
 - Application `banking-demo-postgres` và `banking-demo-redis` hiển thị "Healthy" và "Synced"
 - Nhưng không có Kubernetes resources (Pod, StatefulSet, Service) được tạo ra
 - Application Details Tree chỉ hiển thị Application node, không có resources con
 
 **Nguyên nhân:**
+
 - ArgoCD không render Helm templates đúng cách
 - Values không được merge đúng giữa valueFiles và parameters
 - Application cần hard refresh để reload templates
@@ -1219,11 +1263,13 @@ kubectl get application banking-demo-postgres -n argocd -o yaml | grep -A 30 "st
 ```
 
 **Cách 6: Xem chi tiết lỗi trong ArgoCD UI:**
-   - Vào Application → tab **EVENTS** hoặc **CONDITIONS**
-   - Xem có lỗi gì không
-   - Xem tab **MANIFESTS** để kiểm tra ArgoCD có render được không
+
+- Vào Application → tab **EVENTS** hoặc **CONDITIONS**
+- Xem có lỗi gì không
+- Xem tab **MANIFESTS** để kiểm tra ArgoCD có render được không
 
 **Lưu ý:**
+
 - Đảm bảo namespace "banking" đã được tạo trước (bởi `namespace.yaml`)
 - Đảm bảo secret "banking-db-secret" đã được tạo trước (bởi `namespace.yaml`)
 - StorageClass "nfs-client" phải tồn tại trong cluster
@@ -1231,12 +1277,14 @@ kubectl get application banking-demo-postgres -n argocd -o yaml | grep -A 30 "st
 ### 7.6. SharedResourceWarning - Namespace/Secret được quản lý bởi nhiều Applications
 
 **Triệu chứng:**
+
 - Warning: "Namespace/banking is part of applications argocd/banking-demo-namespace and banking-demo-notification-service"
 - Warning: "Secret/banking-db-secret is part of applications argocd/banking-demo-namespace and banking-demo-auth-service"
 - Namespace cứ tạo ra là mất
 - Postgres/Redis không deploy được
 
 **Nguyên nhân:**
+
 - `charts/common/values.yaml` có `namespace.enabled: true` và `secret.enabled: true`
 - Khi các Applications khác dùng `charts/common/values.yaml`, Helm sẽ render namespace và secret từ templates
 - Gây conflict khi nhiều Applications cùng quản lý cùng một resource
@@ -1246,6 +1294,7 @@ kubectl get application banking-demo-postgres -n argocd -o yaml | grep -A 30 "st
 **✅ Tất cả Applications đã được cập nhật với `namespace.enabled=false` và `secret.enabled=false`**
 
 Các file sau đã được fix:
+
 - `applications/auth-service.yaml`
 - `applications/notification-service.yaml`
 - `applications/account-service.yaml`
@@ -1265,6 +1314,7 @@ chmod +x fix-shared-resource-warnings.sh
 ```
 
 Script sẽ:
+
 1. Apply lại tất cả Applications
 2. Hard refresh Applications
 3. Sync lại theo đúng thứ tự
@@ -1305,6 +1355,7 @@ argocd app manifests banking-demo-notification-service | grep -E "kind: Namespac
 ```
 
 **Lưu ý:**
+
 - ✅ Chỉ Application `banking-demo-namespace` (từ `namespace.yaml`) tạo namespace và secret
 - ✅ Tất cả Applications khác đã có `namespace.enabled=false` và `secret.enabled=false` trong parameters
 - ✅ ApplicationSet (`application-set-all-services.yaml`) cũng đã được cập nhật để tự động disable namespace/secret cho tất cả (trừ namespace)
@@ -1316,6 +1367,7 @@ argocd app manifests banking-demo-notification-service | grep -E "kind: Namespac
 **Triệu chứng:** Status **OutOfSync** hoặc **Missing**
 
 **Nguyên nhân và cách sửa:**
+
 1. **Chưa sync thủ công**: Vào UI → Sync
 2. **Repo URL sai**: Kiểm tra `repoURL` trong Application file
 3. **Branch không tồn tại**: Kiểm tra `targetRevision` (vd: `main` có tồn tại không)
@@ -1326,6 +1378,7 @@ argocd app manifests banking-demo-notification-service | grep -E "kind: Namespac
 **Triệu chứng:** Pod status **CrashLoopBackOff** hoặc **Error**
 
 **Kiểm tra:**
+
 ```bash
 # Xem logs
 kubectl logs -n banking <pod-name>
@@ -1338,6 +1391,7 @@ kubectl get pods -n banking
 ```
 
 **Nguyên nhân thường gặp:**
+
 - Postgres/Redis chưa sẵn sàng → Đợi infra sync xong
 - Image không tồn tại → Kiểm tra `charts/<service>/values.yaml` → `image.repository` và `image.tag`
 - Secret không tồn tại → Kiểm tra `charts/common/values.yaml` → `secret.enabled: true`
@@ -1347,6 +1401,7 @@ kubectl get pods -n banking
 **Triệu chứng:** Service chạy nhưng lỗi "connection refused" hoặc "database not found"
 
 **Kiểm tra:**
+
 ```bash
 # Kiểm tra postgres đã chạy chưa
 kubectl get pods -n banking | grep postgres
@@ -1359,6 +1414,7 @@ kubectl exec -n banking <pod-name> -- env | grep DATABASE_URL
 ```
 
 **Cách sửa:**
+
 - Đảm bảo infra (postgres, redis) đã sync và pods Running
 - Kiểm tra `charts/common/values.yaml` → `secret.databaseUrl` có đúng không
 
@@ -1367,6 +1423,7 @@ kubectl exec -n banking <pod-name> -- env | grep DATABASE_URL
 **Triệu chứng:** Không truy cập được ứng dụng qua domain
 
 **Kiểm tra:**
+
 ```bash
 # Xem ingress
 kubectl get ingress -n banking
@@ -1379,6 +1436,7 @@ kubectl get pods -n haproxy-ingress
 ```
 
 **Cách sửa:**
+
 - Đảm bảo HAProxy Ingress controller đã cài
 - Kiểm tra `charts/common/values.yaml` → `ingress.host` có đúng domain không
 - Kiểm tra DNS trỏ về LoadBalancer IP của HAProxy
@@ -1388,11 +1446,13 @@ kubectl get pods -n haproxy-ingress
 **Triệu chứng:** Browser console lỗi "WebSocket connection failed"
 
 **Kiểm tra:**
+
 - Ingress có annotations cho WebSocket chưa (đã có trong `templates/ingress.yaml`)
 - Kong route `/ws` có đúng chưa (kiểm tra `charts/kong/values.yaml`)
 - Notification service đã chạy chưa
 
 **Cách sửa:**
+
 - Sync lại ingress Application: `argocd app sync banking-demo-ingress`
 - Kiểm tra Kong config: `kubectl get configmap kong-config -n banking -o yaml`
 
